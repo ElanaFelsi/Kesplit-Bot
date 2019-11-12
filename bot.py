@@ -46,14 +46,14 @@ def others_owe_me(context, chat_id, user_id):
     else:
         the_text = "Money you're owed:\n"
         for username, amount in owe_dict.items():
-            the_text += f"\t🔹 @{username}  {round(amount, 2)}\n"
+            the_text += f"\t🔹 @{username}  {amount}\n"
         context.bot.send_message(chat_id=chat_id, text=the_text)
 
 
 def split_purchase(context, chat_id, user_id, amount, item):
     activity_collection = db[chat_id].users_activity
     user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
-    debt = float(amount) / activity_collection.count()
+    debt = round(float(amount) / activity_collection.count(),1)
     for activity in activity_collection.find():
         activity_dict = copy.deepcopy(activity)
         activity_dict['purchases'].append(item)
@@ -74,7 +74,7 @@ def pay(context, chat_id, user_id, amount, member):
     if member in activity_dict['debts']:
 
         if activity_dict['debts'][member] - amount == 0:
-            activity_dict['debts'][member] -= amount
+            activity_dict['debts'].pop(member, None)
             context.bot.send_message(chat_id=chat_id, text=f"You payed off all debts to @{member} \n"
                                                            f"Keep it up 🤩")
         elif activity_dict['debts'][member] - amount < 0:
@@ -107,27 +107,27 @@ def respond(update: Update, context: CallbackContext):
     username = update.message.from_user.username
     text = str(update.message.text)
     if text.startswith("$"):
-        if text == '$':
-            db[chat_id].insert_user_info(user_id, username)
-            context.bot.send_message(chat_id=chat_id,
-                                     text=f"Welcome to ke$plit {update.message.from_user.first_name}🤗!")
-        elif text.startswith("$split"):
-            try:
-                lst = text.split()
-                split_purchase(context, chat_id, user_id, lst[1], " ".join(lst[2:len(lst)]))
-            except ValueError:
+        try:
+            if text == '$':
+                db[chat_id].insert_user_info(user_id, username)
                 context.bot.send_message(chat_id=chat_id,
-                                         text=f"I don't know such money 😬, try again.")
-
-        elif text.startswith("$pay"):
-            try:
+                                         text=f"Welcome to ke$plit {update.message.from_user.first_name}🤗!")
+            elif text.startswith("$split"):
                 lst = text.split()
+                if len(lst) < 3: raise AttributeError
+                split_purchase(context, chat_id, user_id, lst[1], " ".join(lst[2:len(lst)]))
+            elif text.startswith("$pay"):
+                lst = text.split()
+                if len(lst) < 3: raise AttributeError
                 amount = lst[1]
                 member = " ".join(lst[2:len(lst)])
                 pay(context, chat_id, user_id, amount, member)
-            except ValueError:
-                context.bot.send_message(chat_id=chat_id,
-                                         text=f"I don't know such money 😬, try again.")
+        except ValueError:
+            context.bot.send_message(chat_id=chat_id,
+                                     text=f"The money input is incorrect 😬, try again.")
+        except AttributeError:
+            context.bot.send_message(chat_id=chat_id,
+                                     text=f"Incorrect command 😬, hit /help for more info.")
 
 
 def show_debts(update: Update, context: CallbackContext):
@@ -155,7 +155,7 @@ def owe_others(context, chat_id, user_id):
         context.bot.send_message(chat_id=chat_id, text="You do not owe anyone money")
     else:
         for user in owes_dict:
-            owe_text += f"\t🔹 {user} {round(owes_dict[user], 2)}\n"
+            owe_text += f"\t🔹 {user} {owes_dict[user]}\n"
         context.bot.send_message(chat_id=chat_id, text=owe_text)
 
 
