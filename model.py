@@ -14,6 +14,7 @@ class DB:
             'user_id': user_id,
             'username': username
         }
+
         self.users_info.replace_one({'user_id':user_id}, user, upsert=True)
         self.init_users_activity(user_id)
 

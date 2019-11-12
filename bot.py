@@ -31,6 +31,7 @@ def added_to_group(update: Update, context: CallbackContext):
                                                    f"When you need my help hit /help.")
 
 
+
 def others_owe_me(context, chat_id, user_id):
     owe_dict={}
     activity_collection = db[chat_id].users_activity
@@ -46,6 +47,7 @@ def others_owe_me(context, chat_id, user_id):
         the_text += f"\t🔹 @{username}  {amount}\n"
     context.bot.send_message(chat_id=chat_id,text=the_text )
 
+
 def split_purchase(context, chat_id, user_id, amount, item):
     activity_collection = db[chat_id].users_activity
     user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
@@ -60,6 +62,41 @@ def split_purchase(context, chat_id, user_id, amount, item):
                 activity_dict['debts'][user_name] = debt
         activity_collection.replace_one({'user_id': activity['user_id']}, activity_dict, upsert=True)
     context.bot.send_message(chat_id=chat_id, text=f"🛒 {amount}$ was split by all members")
+
+
+def pay(context, chat_id, user_id, amount, member):
+    activity_collection = db[chat_id].users_activity
+    member = member.replace('@', '')
+    amount = float(amount)
+    activity_dict = list(activity_collection.find({'user_id': user_id}))[0]
+    if member in activity_dict['debts']:
+
+        if activity_dict['debts'][member] - amount == 0:
+            activity_dict['debts'][member] -= amount
+            context.bot.send_message(chat_id=chat_id, text=f"You payed off all debts to @{member} \n"
+                                                           f"Keep it up 🤩")
+        elif activity_dict['debts'][member] - amount < 0:
+            difference = amount - activity_dict['debts'][member]
+            activity_dict['debts'][member] = 0
+            owes_me_id = list(db[chat_id].users_info.find({'username': member}))[0]['user_id']
+            user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
+            owes_me_dict = list(activity_collection.find({'user_id': owes_me_id}))[0]
+            if user_name in owes_me_dict['debts']:
+                owes_me_dict['debts'][user_name] += difference
+            else:
+                owes_me_dict['debts'][user_name] = difference
+                pprint(owes_me_dict)
+                activity_collection.replace_one({'user_id': owes_me_id}, owes_me_dict, upsert=True)
+            context.bot.send_message(chat_id=chat_id, text=f"You payed @{member} too much,\n"
+                                                           f"now @{member} owes you {owes_me_dict['debts'][user_name]} "
+                                                           f"🤑")
+        else:
+            owe = activity_dict['debts'][member] - amount
+            activity_dict['debts'][member] -= amount
+            context.bot.send_message(chat_id=chat_id, text=f"You you still owe @{member} {owe} 🤢")
+    else:
+        context.bot.send_message(chat_id=chat_id, text=f"You don't owe @{member} money")
+    activity_collection.replace_one({'user_id': activity_dict['user_id']}, activity_dict, upsert=True)
 
 
 def respond(update: Update, context: CallbackContext):
@@ -79,17 +116,32 @@ def respond(update: Update, context: CallbackContext):
             except ValueError:
                 context.bot.send_message(chat_id=chat_id,
                                          text=f"I don't know such money 😬, try again.")
-    else:
 
-        others_owe_me(context,chat_id,user_id)
+        elif text.startswith("$pay"):
+            try:
+                lst = text.split()
+                amount = lst[1]
+                member = " ".join(lst[2:len(lst)])
+                pay(context, chat_id, user_id, amount, member)
+            except ValueError:
+                context.bot.send_message(chat_id=chat_id,
+                                         text=f"I don't know such money 😬, try again.")
+
+        elif text.startswith("$owe me"):
+            others_owe_me(context, chat_id, user_id)
+
+        elif text.startswith("$I owe"):
+            owe_others(context, chat_id, user_id)
 
 
-    keyboard = [[InlineKeyboardButton("I owe others", callback_data='1'),
-                 InlineKeyboardButton("Others owe me", callback_data='2')]]
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+    #
+    # keyboard = [[InlineKeyboardButton("I owe others", callback_data='1'),
+    #              InlineKeyboardButton("Others owe me", callback_data='2')]]
+    #
+    # reply_markup = InlineKeyboardMarkup(keyboard)
+    #
+    # update.message.reply_text('Please choose:', reply_markup=reply_markup)
 
 
 def owe_others(context, chat_id, user_id):
@@ -103,14 +155,16 @@ def owe_others(context, chat_id, user_id):
 
 
 
-
 def get_help(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     f_name = update.message.from_user.first_name
+
     context.bot.send_message(chat_id=chat_id, text=f"Don't worry I'm here for the rescue 💪💪\n"
                                                    f"Commands:\n"
                                                    f"$ - join ke$plit\n"
-                                                   f"$split (amount) (item) - split your purchase with all members\n")
+                                                   f"$split (amount) (item) - split your purchase with all members\n"
+                                                   f"$pay (amount) (member) - pays member amount you owe him")
+
     logger.info(f"! {f_name} asked for help!")
 
 
