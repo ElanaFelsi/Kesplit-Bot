@@ -1,7 +1,5 @@
 from pymongo import MongoClient
 
-
-
 class DB:
 
     def __init__(self, chat_id, chat_name):
