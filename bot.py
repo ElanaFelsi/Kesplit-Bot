@@ -129,7 +129,7 @@ def respond(update: Update, context: CallbackContext):
             except ValueError:
                 context.bot.send_message(chat_id=chat_id,
                                          text=f"I don't know such money 😬, try again.")
-  
+
 def show_debts(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton("I owe others", callback_data='owe others'),
                  InlineKeyboardButton("Others owe me", callback_data='owe me')]]
