@@ -29,7 +29,7 @@ def respond(update: Update, context: CallbackContext):
 
 def get_help(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
-    f_name= update.message.from_user.first_name
+    f_name = update.message.from_user.first_name
     context.bot.send_message(chat_id=chat_id, text=f"Don't worry' Im here for the rescue 💪💪! ")
 
     logger.info(f"! {f_name} asked for help!")
