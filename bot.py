@@ -1,12 +1,11 @@
 import copy
 from pprint import pprint
 
-from settings import *
-from model import DB
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import  CallbackQueryHandler
-import json
+from telegram.ext import CallbackQueryHandler
 
+from model import DB
+from settings import *
 
 db = {}
 
@@ -33,21 +32,23 @@ def added_to_group(update: Update, context: CallbackContext):
                                                    f"When you need my help hit /help.")
 
 
-
 def others_owe_me(context, chat_id, user_id):
-    owe_dict={}
+    owe_dict = {}
     activity_collection = db[chat_id].users_activity
     user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
     for activity in activity_collection.find():
         if activity['user_id'] != user_id:
             if user_name in activity['debts']:
                 owe_username = list(db[chat_id].users_info.find({'user_id': activity['user_id']}))[0]['username']
-                owe_dict[owe_username]=activity['debts'][user_name]
+                owe_dict[owe_username] = activity['debts'][user_name]
 
-    the_text="people that owe you money:\n"
-    for username,amount in owe_dict.items():
-        the_text += f"\t🔹 @{username}  {amount}\n"
-    context.bot.send_message(chat_id=chat_id,text=the_text )
+    if not owe_dict:
+        context.bot.send_message(chat_id=chat_id, text="No one owes you money!")
+    else:
+        the_text = "Money you're owed:\n"
+        for username, amount in owe_dict.items():
+            the_text += f"\t🔹 @{username}  {round(amount, 2)}\n"
+        context.bot.send_message(chat_id=chat_id, text=the_text)
 
 
 def split_purchase(context, chat_id, user_id, amount, item):
@@ -128,28 +129,12 @@ def respond(update: Update, context: CallbackContext):
             except ValueError:
                 context.bot.send_message(chat_id=chat_id,
                                          text=f"I don't know such money 😬, try again.")
-
-        elif text.startswith("$owe me"):
-            others_owe_me(context, chat_id, user_id)
-
-        elif text.startswith("$I owe"):
-            owe_others(context, chat_id, user_id)
-
-
-
-
+  
+def show_debts(update: Update, context: CallbackContext):
     keyboard = [[InlineKeyboardButton("I owe others", callback_data='owe others'),
                  InlineKeyboardButton("Others owe me", callback_data='owe me')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    message=update.message.reply_text('Please choose:', reply_markup=reply_markup)
-    # context.user_data["message_specific"]=message
-    # print(update.callback_query)
-    # if update.callback_query.data == 'owe others':
-    #     print("ppppp")
-    #     others_owe_me(context, chat_id, user_id)
-    # elif update.callback_query.data == 'owe me':
-    #     print("oooooo")
-    #     owe_others(context, chat_id, user_id)
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
 
 def callback_handler(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
@@ -157,24 +142,22 @@ def callback_handler(update: Update, context: CallbackContext):
     user_id = query.message.reply_to_message.from_user.id
 
     if query.data == 'owe others':
-        others_owe_me(context, chat_id, user_id)
-    elif query.data  == 'owe me':
         owe_others(context, chat_id, user_id)
+    elif query.data == 'owe me':
+        others_owe_me(context, chat_id, user_id)
 
-
-    query.edit_message_text(text="Selected option: {}".format(query.data))
-
+    #query.edit_message_text(text="Selected option: {}".format(query.data))
 
 
 def owe_others(context, chat_id, user_id):
-    owe_text = f"peoples that you owe them money:\n"
+    owe_text = f"Money you owe:\n"
     owes_dict = list(db[chat_id].users_activity.find({'user_id': user_id}))[0]['debts']
-    for user in owes_dict:
-        owe_text += f"\t🔹 {user} {owes_dict[user]}\n"
-    context.bot.send_message(chat_id=chat_id,text = owe_text)
-
-
-
+    if not owes_dict:
+        context.bot.send_message(chat_id=chat_id, text="You do not owe anyone money")
+    else:
+        for user in owes_dict:
+            owe_text += f"\t🔹 {user} {round(owes_dict[user], 2)}\n"
+        context.bot.send_message(chat_id=chat_id, text=owe_text)
 
 
 def get_help(update: Update, context: CallbackContext):
@@ -193,10 +176,11 @@ def get_help(update: Update, context: CallbackContext):
 updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler, pass_chat_data=True))
 start_handler = CommandHandler('start', added_to_group)
 help_handler = CommandHandler('help', get_help)
+debts_handler = CommandHandler('debts', show_debts)
 
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
-
+dispatcher.add_handler(debts_handler)
 
 updater.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, added_to_group))
 
