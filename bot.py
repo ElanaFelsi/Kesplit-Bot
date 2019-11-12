@@ -31,6 +31,20 @@ def added_to_group(update: Update, context: CallbackContext):
                                                    f"When you need my help hit /help.")
 
 
+def others_owe_me(context, chat_id, user_id):
+    owe_dict={}
+    activity_collection = db[chat_id].users_activity
+    user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
+    for activity in activity_collection.find():
+        if activity['user_id'] != user_id:
+            if user_name in activity['debts']:
+                owe_username = list(db[chat_id].users_info.find({'user_id': activity['user_id']}))[0]['username']
+                owe_dict[owe_username]=activity['debts'][user_name]
+
+    the_text="people that owe you money:\n"
+    for username,amount in owe_dict.items():
+        the_text += f"\t🔹 @{username}  {amount}\n"
+    context.bot.send_message(chat_id=chat_id,text=the_text )
 
 def split_purchase(context, chat_id, user_id, amount, item):
     activity_collection = db[chat_id].users_activity
@@ -65,6 +79,9 @@ def respond(update: Update, context: CallbackContext):
             except ValueError:
                 context.bot.send_message(chat_id=chat_id,
                                          text=f"I don't know such money 😬, try again.")
+    else:
+
+        others_owe_me(context,chat_id,user_id)
 
 
     keyboard = [[InlineKeyboardButton("I owe others", callback_data='1'),
