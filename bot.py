@@ -1,8 +1,11 @@
 import copy
 from pprint import pprint
-
+import schedule
+import time
 from settings import *
 from model import DB
+import telegram.ext
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
@@ -41,11 +44,13 @@ def others_owe_me(context, chat_id, user_id):
             if user_name in activity['debts']:
                 owe_username = list(db[chat_id].users_info.find({'user_id': activity['user_id']}))[0]['username']
                 owe_dict[owe_username]=activity['debts'][user_name]
-
-    the_text="people that owe you money:\n"
-    for username,amount in owe_dict.items():
-        the_text += f"\t🔹 @{username}  {amount}\n"
-    context.bot.send_message(chat_id=chat_id,text=the_text )
+    if not owe_dict:
+        context.bot.send_message(chat_id=chat_id, text="No one owes you money!")
+    else:
+        the_text="people that owe you money:\n"
+        for username,amount in owe_dict.items():
+            the_text += f"\t🔹 @{username}  {round(amount,2)}\n"
+        context.bot.send_message(chat_id=chat_id,text=the_text )
 
 
 def split_purchase(context, chat_id, user_id, amount, item):
@@ -77,7 +82,7 @@ def pay(context, chat_id, user_id, amount, member):
                                                            f"Keep it up 🤩")
         elif activity_dict['debts'][member] - amount < 0:
             difference = amount - activity_dict['debts'][member]
-            activity_dict['debts'][member] = 0
+            activity_dict['debts'].pop(member, None)
             owes_me_id = list(db[chat_id].users_info.find({'username': member}))[0]['user_id']
             user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
             owes_me_dict = list(activity_collection.find({'user_id': owes_me_id}))[0]
@@ -86,7 +91,7 @@ def pay(context, chat_id, user_id, amount, member):
             else:
                 owes_me_dict['debts'][user_name] = difference
                 pprint(owes_me_dict)
-                activity_collection.replace_one({'user_id': owes_me_id}, owes_me_dict, upsert=True)
+            activity_collection.replace_one({'user_id': owes_me_id}, owes_me_dict, upsert=True)
             context.bot.send_message(chat_id=chat_id, text=f"You payed @{member} too much,\n"
                                                            f"now @{member} owes you {owes_me_dict['debts'][user_name]} "
                                                            f"🤑")
@@ -147,9 +152,12 @@ def respond(update: Update, context: CallbackContext):
 def owe_others(context, chat_id, user_id):
     owe_text = f"peoples that you owe them money:\n"
     owes_dict = list(db[chat_id].users_activity.find({'user_id': user_id}))[0]['debts']
-    for user in owes_dict:
-        owe_text += f"\t🔹 {user} {owes_dict[user]}\n"
-    context.bot.send_message(chat_id=chat_id,text = owe_text)
+    if not owes_dict:
+        context.bot.send_message(chat_id=chat_id, text="You do not owe anyone money")
+    else:
+        for user in owes_dict:
+            owe_text += f"\t🔹 {user} {round(owes_dict[user],2)}\n"
+        context.bot.send_message(chat_id=chat_id,text = owe_text)
 
 
 
@@ -161,17 +169,34 @@ def get_help(update: Update, context: CallbackContext):
 
     context.bot.send_message(chat_id=chat_id, text=f"Don't worry I'm here for the rescue 💪💪\n"
                                                    f"Commands:\n"
+                                                   f"/schedule - for scheduling a paying reminder time\n"
                                                    f"$ - join ke$plit\n"
                                                    f"$split (amount) (item) - split your purchase with all members\n"
                                                    f"$pay (amount) (member) - pays member amount you owe him")
 
     logger.info(f"! {f_name} asked for help!")
 
+def remind(context: telegram.ext.CallbackContext):
+    #chat_id = update.effective_chat.id
+    context.bot.send_message(chat_id=context.job.context, text=f"🔔Reminder🔔\n"
+                                                   f"Hi guys!! Just reminding you all to pay your debts\n")
+
+
+
+def schedule_reminder( update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    context.bot.send_message(chat_id=chat_id, text=f"I'll remind you guys to pay every minute⏰"
+                                                   f"I'll start now!\n")
+    j = updater.job_queue
+    job_minute = j.run_repeating(remind, interval=60, context=update.message.chat_id,first=1)
+
 
 start_handler = CommandHandler('start', added_to_group)
+schedule_handler = CommandHandler('schedule', schedule_reminder)
 help_handler = CommandHandler('help', get_help)
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
+dispatcher.add_handler(schedule_handler)
 
 updater.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, added_to_group))
 
