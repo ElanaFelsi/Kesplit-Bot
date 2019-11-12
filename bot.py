@@ -3,6 +3,8 @@ from pprint import pprint
 
 from settings import *
 from model import DB
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 
 db = {}
 
@@ -63,6 +65,26 @@ def respond(update: Update, context: CallbackContext):
             except ValueError:
                 context.bot.send_message(chat_id=chat_id,
                                          text=f"I don't know such money 😬, try again.")
+
+
+    keyboard = [[InlineKeyboardButton("I owe others", callback_data='1'),
+                 InlineKeyboardButton("Others owe me", callback_data='2')]]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+
+
+def owe_others(context, chat_id, user_id):
+    owe_text = f"peoples that you owe them money:\n"
+    owes_dict = list(db[chat_id].users_activity.find({'user_id': user_id}))[0]['debts']
+    for user in owes_dict:
+        owe_text += f"\t🔹 {user} {owes_dict[user]}\n"
+    context.bot.send_message(chat_id=chat_id,text = owe_text)
+
+
+
+
 
 
 def get_help(update: Update, context: CallbackContext):
