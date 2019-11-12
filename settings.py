@@ -4,7 +4,7 @@
 import secret_settings
 import logging
 import telegram
-import telepot as telepot
+import telethon
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackContext, MessageHandler, \
     Filters, Updater
