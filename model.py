@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-=======
-from pymongo import MongoClient
-from collections import defaultdict
->>>>>>> origin/hadas_branch
-
 from pymongo import MongoClient
 
 class DB:
@@ -29,9 +23,5 @@ class DB:
             'purchases': [],
             'debts': {}
         }
-<<<<<<< HEAD
-        self.users_activity.insert_one(activity)
 
-=======
         self.users_activity.replace_one({'user_id':user_id}, activity, upsert=True)
->>>>>>> origin/hadas_branch
