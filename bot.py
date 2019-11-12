@@ -160,7 +160,8 @@ def get_help(update: Update, context: CallbackContext):
 
     context.bot.send_message(chat_id=chat_id, text=f"Don't worry I'm here for the rescue 💪💪\n"
                                                    f"Commands:\n"
-                                                   f"/schedule - for scheduling a paying reminder time\n"
+                                                   f"/schedule - schedule a paying reminder time\n"
+                                                   f"/debts - display your debts\n"
                                                    f"$ - join ke$plit\n"
                                                    f"$split (amount) (item) - split your purchase with all members\n"
                                                    f"$pay (amount) (member) - pays member amount you owe him")
