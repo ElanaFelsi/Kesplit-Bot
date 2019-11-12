@@ -4,6 +4,8 @@ from pprint import pprint
 from settings import *
 from model import DB
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import  CallbackQueryHandler
+import json
 
 
 db = {}
@@ -135,13 +137,33 @@ def respond(update: Update, context: CallbackContext):
 
 
 
-    #
-    # keyboard = [[InlineKeyboardButton("I owe others", callback_data='1'),
-    #              InlineKeyboardButton("Others owe me", callback_data='2')]]
-    #
-    # reply_markup = InlineKeyboardMarkup(keyboard)
-    #
-    # update.message.reply_text('Please choose:', reply_markup=reply_markup)
+
+    keyboard = [[InlineKeyboardButton("I owe others", callback_data='owe others'),
+                 InlineKeyboardButton("Others owe me", callback_data='owe me')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    message=update.message.reply_text('Please choose:', reply_markup=reply_markup)
+    # context.user_data["message_specific"]=message
+    # print(update.callback_query)
+    # if update.callback_query.data == 'owe others':
+    #     print("ppppp")
+    #     others_owe_me(context, chat_id, user_id)
+    # elif update.callback_query.data == 'owe me':
+    #     print("oooooo")
+    #     owe_others(context, chat_id, user_id)
+
+def button(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    query = update.callback_query
+    user_id = query.message.reply_to_message.from_user.id
+
+    if query.data == 'owe others':
+        others_owe_me(context, chat_id, user_id)
+    elif query.data  == 'owe me':
+        owe_others(context, chat_id, user_id)
+
+
+    query.edit_message_text(text="Selected option: {}".format(query.data))
+
 
 
 def owe_others(context, chat_id, user_id):
@@ -168,10 +190,13 @@ def get_help(update: Update, context: CallbackContext):
     logger.info(f"! {f_name} asked for help!")
 
 
+updater.dispatcher.add_handler(CallbackQueryHandler(button, pass_chat_data=True))
 start_handler = CommandHandler('start', added_to_group)
 help_handler = CommandHandler('help', get_help)
+
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
+
 
 updater.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, added_to_group))
 
