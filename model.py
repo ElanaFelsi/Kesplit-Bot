@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 
 
+
 class DB:
 
     def __init__(self, chat_id, chat_name):
@@ -15,7 +16,8 @@ class DB:
             'user_id': user_id,
             'username': username
         }
-        self.users_info.replace_one({'user_id': user_id}, user, upsert=True)
+
+        self.users_info.replace_one({'user_id':user_id}, user, upsert=True)
         self.init_users_activity(user_id)
 
     def init_users_activity(self, user_id):
@@ -24,4 +26,5 @@ class DB:
             'purchases': [],
             'debts': {}
         }
-        self.users_activity.replace_one({'user_id': user_id}, activity, upsert=True)
+
+        self.users_activity.replace_one({'user_id':user_id}, activity, upsert=True)

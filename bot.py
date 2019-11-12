@@ -1,7 +1,7 @@
 from settings import *
+from model import DB
 
-
-
+db = None
 
 
 def build_menu(buttons,
@@ -16,40 +16,40 @@ def build_menu(buttons,
     return menu
 
 
-
-
+def added_to_group(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    group_name = update.effective_chat.title
+    global db
+    db = DB(chat_id, group_name)
+    context.bot.send_message(chat_id=chat_id, text=f"Welcome all 😄, I am your money manager! "
+                                                   f"If you want to join splitting money💰, just say $. "
+                                                   f"When you need my help hit /help.")
 
 
 def respond(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     text = str(update.message.text)
     if text.startswith("$"):
-        print("good message")
+        if text == '$':
+            user_id = update.message.from_user.id
+            username = update.message.from_user.username
+            db.insert_user_info(user_id, username)
+            context.bot.send_message(chat_id=chat_id, text=f"Welcome to ke$plit {update.message.from_user.first_name}🤗!")
 
 
 def get_help(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     f_name = update.message.from_user.first_name
-    context.bot.send_message(chat_id=chat_id, text=f"Don't worry' Im here for the rescue 💪💪! ")
+
+    context.bot.send_message(chat_id=chat_id, text=f"Don't worry' Im here for the rescue 💪💪! "
+                                                   f"$ for joining the money split. ")
 
     logger.info(f"! {f_name} asked for help!")
-def added_to_group(update: Update, context: CallbackContext):
-    chat_id = update.effective_chat.id
-    group_name = update.effective_chat.title
-    context.bot.send_message(chat_id=chat_id, text=f"Welcome all 😄, I am your money manager! "
-                                                   f"If you want to join splitting money💰, just say $. "
-                                                   f"When you need my help hit /help.")
 
 
-
-
-
-    #create_db(chat_id,group_name)
-    #add a new data base for the group information
-
-#start_handler = CommandHandler('start', start)
-help_handler=CommandHandler('help',get_help)
-#dispatcher.add_handler(start_handler)
+start_handler = CommandHandler('start', added_to_group)
+help_handler = CommandHandler('help', get_help)
+dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
 
 updater.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, added_to_group))
@@ -60,4 +60,3 @@ logger.info("* Start polling...")
 updater.start_polling()  # Starts polling in a background thread.
 updater.idle()  # Wait until Ctrl+C is pressed
 logger.info("* Bye!")
-
