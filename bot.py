@@ -151,7 +151,7 @@ def respond(update: Update, context: CallbackContext):
     #     print("oooooo")
     #     owe_others(context, chat_id, user_id)
 
-def button(update: Update, context: CallbackContext):
+def callback_handler(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     query = update.callback_query
     user_id = query.message.reply_to_message.from_user.id
@@ -190,7 +190,7 @@ def get_help(update: Update, context: CallbackContext):
     logger.info(f"! {f_name} asked for help!")
 
 
-updater.dispatcher.add_handler(CallbackQueryHandler(button, pass_chat_data=True))
+updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler, pass_chat_data=True))
 start_handler = CommandHandler('start', added_to_group)
 help_handler = CommandHandler('help', get_help)
 
