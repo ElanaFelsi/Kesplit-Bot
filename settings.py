@@ -4,7 +4,10 @@
 import secret_settings
 import logging
 import telegram
+<<<<<<< HEAD
 import telethon
+=======
+>>>>>>> origin/hadas_branch
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackContext, MessageHandler, \
     Filters, Updater
