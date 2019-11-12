@@ -1,7 +1,7 @@
 from settings import *
 from model import DB
 
-db = None
+db = {}
 
 
 def build_menu(buttons,
@@ -20,28 +20,35 @@ def added_to_group(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     group_name = update.effective_chat.title
     global db
-    db = DB(chat_id, group_name)
+    db[chat_id] = DB(chat_id, group_name)
     context.bot.send_message(chat_id=chat_id, text=f"Welcome all 😄, I am your money manager! "
                                                    f"If you want to join splitting money💰, just say $. "
                                                    f"When you need my help hit /help.")
 
 
+
 def respond(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username
     text = str(update.message.text)
     if text.startswith("$"):
         if text == '$':
-            user_id = update.message.from_user.id
-            username = update.message.from_user.username
-            db.insert_user_info(user_id, username)
+            db[chat_id].insert_user_info(user_id, username)
             context.bot.send_message(chat_id=chat_id, text=f"Welcome to ke$plit {update.message.from_user.first_name}🤗!")
+        elif text == "$users":
+            # context.bot.send_message(chat_id=chat_id,
+            #                          text=[f"* {user['username']} id:{user['user_id']}\n"
+            #                                for user in db[chat_id].users_info.find()])
+            print([f"{user['username']} id:{user['user_id']}" for user in db[chat_id].users_info.find()])
+
 
 
 def get_help(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     f_name = update.message.from_user.first_name
-    context.bot.send_message(chat_id=chat_id, text=f"Don't worry' Im here for the rescue 💪💪! "
-                                                   f"$ for joining the money split. ")
+    context.bot.send_message(chat_id=chat_id, text=f"Don't worry' Im here for the rescue 💪💪\n"
+                                                   f"$ - joining ke$plit. ")
     logger.info(f"! {f_name} asked for help!")
 
 
