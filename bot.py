@@ -146,7 +146,27 @@ def callback_handler(update: Update, context: CallbackContext):
         owe_others(context, chat_id, user_id)
     elif query.data == 'owe me':
         others_owe_me(context, chat_id, user_id)
+    elif query.data == "monthly" or query.data == "weekly" or query.data == "every minute":
+        how_often(update,context,query.data)
 
+
+def how_often(update: Update, context: CallbackContext,timing):
+    chat_id = update.effective_chat.id
+    timing_dict={'weekly':'once a week','monthly':'once a month','every minute':'every minute'}
+    context.bot.send_message(chat_id=chat_id, text=f"I'll remind you guys to pay {timing_dict[timing]}⏰"
+                                                   f"I'll start now!\n")
+    j = updater.job_queue
+    if timing == "weekly":
+        job_minute = j.run_repeating(remind, interval=604800, context=chat_id, first=1)
+    elif timing == "monthly":
+        job_minute = j.run_repeating(remind, interval=2592000, context=chat_id, first=1)
+    else:
+        job_minute = j.run_repeating(remind, interval=60, context=chat_id, first=1)
+
+def remind(context: telegram.ext.CallbackContext):
+    # chat_id = update.effective_chat.id
+    context.bot.send_message(chat_id=context.job.context, text=f"🔔Reminder🔔\n"
+                                                               f"Hi guys!! Just reminding you all to pay your /debts\n")
 
 def owe_others(context, chat_id, user_id):
     owe_text = f"Money you owe:\n"
@@ -174,18 +194,15 @@ def get_help(update: Update, context: CallbackContext):
     logger.info(f"! {f_name} asked for help!")
 
 
-def remind(context: telegram.ext.CallbackContext):
-    # chat_id = update.effective_chat.id
-    context.bot.send_message(chat_id=context.job.context, text=f"🔔Reminder🔔\n"
-                                                               f"Hi guys!! Just reminding you all to pay your debts\n")
+
 
 
 def schedule_reminder(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
-    context.bot.send_message(chat_id=chat_id, text=f"I'll remind you guys to pay every minute⏰"
-                                                   f"I'll start now!\n")
-    j = updater.job_queue
-    job_minute = j.run_repeating(remind, interval=60, context=update.message.chat_id, first=1)
+    keyboard = [[InlineKeyboardButton("monthly", callback_data='monthly'),
+                 InlineKeyboardButton("weekly", callback_data='weekly')],[InlineKeyboardButton("every minute", callback_data='every minute')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(text="How often?",reply_markup=reply_markup)
 
 
 start_handler = CommandHandler('start', added_to_group)
