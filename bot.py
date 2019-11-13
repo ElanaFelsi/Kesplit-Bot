@@ -7,18 +7,10 @@ from model import DB
 from settings import *
 
 db = {}
+split_members = []
 
-
-def build_menu(buttons,
-               n_cols,
-               header_buttons=None,
-               footer_buttons=None):
-    menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
-    if header_buttons:
-        menu.insert(0, [header_buttons])
-    if footer_buttons:
-        menu.append([footer_buttons])
-    return menu
+amount = 0
+item = ''
 
 
 def added_to_group(update: Update, context: CallbackContext):
@@ -50,10 +42,10 @@ def others_owe_me(context, chat_id, user_id):
         context.bot.send_message(chat_id=chat_id, text=the_text)
 
 
-def split_purchase(context, chat_id, user_id, amount, item):
+def split_purchase(context, chat_id, user_id):
     activity_collection = db[chat_id].users_activity
     user_name = list(db[chat_id].users_info.find({'user_id': user_id}))[0]['username']
-    debt = round(float(amount) / activity_collection.count(),1)
+    debt = round(float(amount) / activity_collection.count(), 1)
     for activity in activity_collection.find():
         activity_dict = copy.deepcopy(activity)
         activity_dict['purchases'].append(item)
@@ -64,6 +56,25 @@ def split_purchase(context, chat_id, user_id, amount, item):
                 activity_dict['debts'][user_name] = debt
         activity_collection.replace_one({'user_id': activity['user_id']}, activity_dict, upsert=True)
     context.bot.send_message(chat_id=chat_id, text=f"🛒 {amount}$ was split by all members")
+
+
+def split_specific_purchase(update, context, chat_id, from_id):
+    global split_members
+    from_user_name = list(db[chat_id].users_info.find({'user_id': from_id}))[0]['username']
+    activity_collection = db[chat_id].users_activity
+    debt = round(float(amount) / (len(split_members) + 1), 1)
+    for member in split_members:
+        user_id = list(db[chat_id].users_info.find({'username': member}))[0]['user_id']
+        activity = list(activity_collection.find({'user_id': user_id}))[0]
+        activity_dict = copy.deepcopy(activity)
+        activity_dict['purchases'].append(item)
+        if activity['user_id'] != from_id:
+            if from_user_name in activity_dict['debts']:
+                activity_dict['debts'][from_user_name] += debt
+            else:
+                activity_dict['debts'][from_user_name] = debt
+        activity_collection.replace_one({'user_id': activity['user_id']}, activity_dict, upsert=True)
+    context.bot.send_message(chat_id=chat_id, text=f"🛒 {amount}$ was split by the members you asked.")
 
 
 def pay(context, chat_id, user_id, amount, member):
@@ -95,7 +106,7 @@ def pay(context, chat_id, user_id, amount, member):
         else:
             owe = activity_dict['debts'][member] - amount
             activity_dict['debts'][member] -= amount
-            context.bot.send_message(chat_id=chat_id, text=f"You you still owe @{member} {owe} 🤢")
+            context.bot.send_message(chat_id=chat_id, text=f"You still owe @{member} {owe} 🤢")
     else:
         context.bot.send_message(chat_id=chat_id, text=f"You don't owe @{member} money")
     activity_collection.replace_one({'user_id': activity_dict['user_id']}, activity_dict, upsert=True)
@@ -115,7 +126,12 @@ def respond(update: Update, context: CallbackContext):
             elif text.startswith("$split"):
                 lst = text.split()
                 if len(lst) < 3: raise AttributeError
-                split_purchase(context, chat_id, user_id, lst[1], " ".join(lst[2:len(lst)]))
+                global amount
+                amount = lst[1]
+                global item
+                item = " ".join(lst[2:len(lst)])
+                members_inline_keyboard(update, context, chat_id, user_id)
+                # split_purchase(context, chat_id, user_id, lst[1], " ".join(lst[2:len(lst)]))
             elif text.startswith("$pay"):
                 lst = text.split()
                 if len(lst) < 3: raise AttributeError
@@ -138,7 +154,23 @@ def show_debts(update: Update, context: CallbackContext):
     update.message.reply_text('Please choose:', reply_markup=reply_markup)
 
 
+def members_inline_keyboard(update: Update, context: CallbackContext, chat_id, user_id):
+    member_keyboard = []
+    member_keyboard.append([InlineKeyboardButton('All Members', callback_data='all members')])
+    all_users = list(db[chat_id].users_info.find({}))
+    for user in all_users:
+        if user['user_id'] != user_id:
+            username = user['username']
+            member_keyboard.append([InlineKeyboardButton('@' + username, callback_data=username)])
+    member_keyboard.append([InlineKeyboardButton('Done', callback_data='done'),
+                            InlineKeyboardButton('Cancel', callback_data='cancel')])
+    reply_markup = InlineKeyboardMarkup(member_keyboard)
+    message = update.message.reply_text('Split with:', reply_markup=reply_markup)
+    context.user_data["user_message_id"] = message.message_id
+
+
 def callback_handler(update: Update, context: CallbackContext):
+    global split_members
     chat_id = update.effective_chat.id
     query = update.callback_query
     user_id = query.message.reply_to_message.from_user.id
@@ -148,12 +180,40 @@ def callback_handler(update: Update, context: CallbackContext):
     elif query.data == 'owe me':
         others_owe_me(context, chat_id, user_id)
     elif query.data == "monthly" or query.data == "weekly" or query.data == "every minute":
-        how_often(update,context,query.data)
+        how_often(update, context, query.data)
+
+    elif query.data == 'all members':
+        split_purchase(context, chat_id, user_id)
+
+    elif query.data == 'done':
+        split_specific_purchase(update, context, chat_id, user_id)
+        split_members = []
+    all_users = list(db[chat_id].users_info.find({}))
+    for user in all_users:
+        if query.data == user['username'] and user_id != user['user_id']:
+            split_members.append(user['username'])
+
+    # member_keyboard = []
+    # member_keyboard.append([InlineKeyboardButton('❌' + 'All Members', callback_data='all members')])
+    # for user in all_users:
+    #   sign_check = '✔' if user['username'] == query.data else '❌'
+    #   username = user['username']
+    #    member_keyboard.append([InlineKeyboardButton(f'{sign_check}' + '@' + username, callback_data=username)])
+
+    # member_keyboard.append([InlineKeyboardButton('Done', callback_data='done'),
+    #                        InlineKeyboardButton('Cancel', callback_data='cancel')])
+    # reply_markup = InlineKeyboardMarkup(member_keyboard)
+    # context.bot.edit_message_reply_markup(chat_id=chat_id, message_id=context.user_data["user_message_id"],
+    #                                          reply_markup=reply_markup)
+
+    # query.edit_message_text(text="✔")
+    # context.bot.edit_message_reply_markup(chat_id= chat_id, message_id=update.message.message_id, reply_markup=)
+    # split_members.append(user['username'])
 
 
-def how_often(update: Update, context: CallbackContext,timing):
+def how_often(update: Update, context: CallbackContext, timing):
     chat_id = update.effective_chat.id
-    timing_dict={'weekly':'once a week','monthly':'once a month','every minute':'every minute'}
+    timing_dict = {'weekly': 'once a week', 'monthly': 'once a month', 'every minute': 'every minute'}
     context.bot.send_message(chat_id=chat_id, text=f"I'll remind you guys to pay {timing_dict[timing]}⏰"
                                                    f"I'll start now!\n")
     j = updater.job_queue
@@ -164,10 +224,12 @@ def how_often(update: Update, context: CallbackContext,timing):
     else:
         job_minute = j.run_repeating(remind, interval=60, context=chat_id, first=1)
 
+
 def remind(context: telegram.ext.CallbackContext):
     # chat_id = update.effective_chat.id
     context.bot.send_message(chat_id=context.job.context, text=f"🔔Reminder🔔\n"
                                                                f"Hi guys!! Just reminding you all to pay your /debts\n")
+
 
 def owe_others(context, chat_id, user_id):
     owe_text = f"Money you owe:\n"
@@ -176,7 +238,7 @@ def owe_others(context, chat_id, user_id):
         context.bot.send_message(chat_id=chat_id, text="You do not owe anyone money")
     else:
         for user in owes_dict:
-            owe_text += f"\t🔹 {user} {owes_dict[user]}\n"
+            owe_text += f"\t🔹 @{user} {owes_dict[user]}\n"
         context.bot.send_message(chat_id=chat_id, text=owe_text)
 
 
@@ -188,22 +250,22 @@ def get_help(update: Update, context: CallbackContext):
                                                    f"Commands:\n"
                                                    f"/schedule - schedule a paying reminder time\n"
                                                    f"/debts - display your debts\n"
+                                                   f"/list - display your last purchases\n"
                                                    f"$ - join ke$plit\n"
-                                                   f"$split (amount) (item) - split your purchase with all members\n"
+                                                   f"$split (amount) (item) - split your purchase with members\n"
                                                    f"$pay (amount) (member) - pays member amount you owe him")
 
     logger.info(f"! {f_name} asked for help!")
 
 
-
-
-
 def schedule_reminder(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     keyboard = [[InlineKeyboardButton("monthly", callback_data='monthly'),
-                 InlineKeyboardButton("weekly", callback_data='weekly')],[InlineKeyboardButton("every minute", callback_data='every minute')]]
+                 InlineKeyboardButton("weekly", callback_data='weekly')],
+                [InlineKeyboardButton("every minute", callback_data='every minute')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text="How often?",reply_markup=reply_markup)
+    update.message.reply_text(text="How often?", reply_markup=reply_markup)
+
 
 def show_purchases_list(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
@@ -216,7 +278,6 @@ def show_purchases_list(update: Update, context: CallbackContext):
     # print(activity)
 
     # user_purchases_list = user_activity
-
 
     # for activity in db[chat_id].users_activity.find():
     #     if activity['user_id'] != user_id:
