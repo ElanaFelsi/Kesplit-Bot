@@ -227,6 +227,7 @@ def get_help(update: Update, context: CallbackContext):
                                                    f"Commands:\n"
                                                    f"/schedule - schedule a paying reminder time\n"
                                                    f"/debts - display your debts\n"
+                                                   f"/list - display your last purchases\n"
                                                    f"$ - join ke$plit\n"
                                                    f"$split (amount) (item) - split your purchase with members\n"
                                                    f"$pay (amount) (member) - pays member amount you owe him")
