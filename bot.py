@@ -122,6 +122,7 @@ def respond(update: Update, context: CallbackContext):
                 amount = lst[1]
                 member = " ".join(lst[2:len(lst)])
                 pay(context, chat_id, user_id, amount, member)
+
         except ValueError:
             context.bot.send_message(chat_id=chat_id,
                                      text=f"The money input is incorrect 😬, try again.")
@@ -204,17 +205,38 @@ def schedule_reminder(update: Update, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text="How often?",reply_markup=reply_markup)
 
+def show_purchases_list(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    user_id = update.message.from_user.id
+    user_purchases = list(db[chat_id].users_activity.find({'user_id': user_id}))[0]['purchases'][-10:]
+    text = "your last 10 purchases:\n"
+    for purchase in user_purchases:
+        text += f"\t🛍 {purchase}\n"
+    context.bot.send_message(chat_id=chat_id, text=text)
+    # print(activity)
+
+    # user_purchases_list = user_activity
+
+
+    # for activity in db[chat_id].users_activity.find():
+    #     if activity['user_id'] != user_id:
+    #         if user_name in activity['debts']:
+    #             owe_username = list(db[chat_id].users_info.find({'user_id': activity['user_id']}))[0]['username']
+    #             owe_dict[owe_username] = activity['debts'][user_name]
+
 
 start_handler = CommandHandler('start', added_to_group)
 schedule_handler = CommandHandler('schedule', schedule_reminder)
 help_handler = CommandHandler('help', get_help)
 debts_handler = CommandHandler('debts', show_debts)
+list_handler = CommandHandler('list', show_purchases_list)
 
 updater.dispatcher.add_handler(CallbackQueryHandler(callback_handler, pass_chat_data=True))
 dispatcher.add_handler(start_handler)
 dispatcher.add_handler(help_handler)
 dispatcher.add_handler(schedule_handler)
 dispatcher.add_handler(debts_handler)
+dispatcher.add_handler(list_handler)
 
 updater.dispatcher.add_handler(MessageHandler(Filters.status_update.new_chat_members, added_to_group))
 
