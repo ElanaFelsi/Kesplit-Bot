@@ -62,7 +62,7 @@ def split_specific_purchase(update, context, chat_id, from_id):
     global split_members
     from_user_name = list(db[chat_id].users_info.find({'user_id': from_id}))[0]['username']
     activity_collection = db[chat_id].users_activity
-    debt = round(float(amount) / (len(split_members)+1), 1)
+    debt = round(float(amount) / (len(split_members) + 1), 1)
     for member in split_members:
         user_id = list(db[chat_id].users_info.find({'username': member}))[0]['user_id']
         activity = list(activity_collection.find({'user_id': user_id}))[0]
@@ -179,7 +179,7 @@ def callback_handler(update: Update, context: CallbackContext):
     elif query.data == 'owe me':
         others_owe_me(context, chat_id, user_id)
     elif query.data == "monthly" or query.data == "weekly" or query.data == "every minute":
-        how_often(update,context,query.data)
+        how_often(update, context, query.data)
 
     if query.data == 'all members':
         split_purchase(context, chat_id, user_id)
@@ -210,9 +210,9 @@ def callback_handler(update: Update, context: CallbackContext):
     # split_members.append(user['username'])
 
 
-def how_often(update: Update, context: CallbackContext,timing):
+def how_often(update: Update, context: CallbackContext, timing):
     chat_id = update.effective_chat.id
-    timing_dict={'weekly':'once a week','monthly':'once a month','every minute':'every minute'}
+    timing_dict = {'weekly': 'once a week', 'monthly': 'once a month', 'every minute': 'every minute'}
     context.bot.send_message(chat_id=chat_id, text=f"I'll remind you guys to pay {timing_dict[timing]}⏰"
                                                    f"I'll start now!\n")
     j = updater.job_queue
@@ -223,10 +223,12 @@ def how_often(update: Update, context: CallbackContext,timing):
     else:
         job_minute = j.run_repeating(remind, interval=60, context=chat_id, first=1)
 
+
 def remind(context: telegram.ext.CallbackContext):
     # chat_id = update.effective_chat.id
     context.bot.send_message(chat_id=context.job.context, text=f"🔔Reminder🔔\n"
                                                                f"Hi guys!! Just reminding you all to pay your /debts\n")
+
 
 def owe_others(context, chat_id, user_id):
     owe_text = f"Money you owe:\n"
@@ -254,15 +256,13 @@ def get_help(update: Update, context: CallbackContext):
     logger.info(f"! {f_name} asked for help!")
 
 
-
-
-
 def schedule_reminder(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     keyboard = [[InlineKeyboardButton("monthly", callback_data='monthly'),
-                 InlineKeyboardButton("weekly", callback_data='weekly')],[InlineKeyboardButton("every minute", callback_data='every minute')]]
+                 InlineKeyboardButton("weekly", callback_data='weekly')],
+                [InlineKeyboardButton("every minute", callback_data='every minute')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(text="How often?",reply_markup=reply_markup)
+    update.message.reply_text(text="How often?", reply_markup=reply_markup)
 
 
 start_handler = CommandHandler('start', added_to_group)
