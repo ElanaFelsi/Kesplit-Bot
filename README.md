@@ -1,11 +1,12 @@
-# {YOUR BOT NAME HERE}
-<https://t.me/{BOT_ID}>
+# ke$plit
 
-{ONE LINE BOT DESCRIPTION HERE} 
 
-* {Participant 1 Name}
-* {Participant 2 Name}
-* {Participant 3 Name}
+Money splitter bot that helps you  manage your expenses in a group
+
+* Elane Felsenthal
+* Hadas Wittow
+* Miriam Gottshalk
+
 
 {OPTIONAL: MORE PROJECT INFO HERE}
 
@@ -16,8 +17,9 @@
 ## How to Run This Bot
 ### Prerequisites
 * Python 3.7
-* pipenv
-* {ADD MORE DEPENDENCIES HERE - FOR EXAMPLE MONGODB OR ANYTHING ELSE}
+* Pipenv
+* MongoDB
+
 
 ### Setup
 * Clone this repo from github
@@ -27,24 +29,14 @@
 
         BOT_TOKEN = "your-bot-token-here"
 
-### Run
-To run the bot use:
 
-    pipenv run python bot.py
 
-### Running tests
-First make sure to install all dev dependencies:
-
-    pipenv install --dev
-
-To run all test  use:
-
-    pipenv run pytest
-
-(Or just `pytest` if running in a pipenv shell.)
 
 ## Credits and References
-* [Telegram Docs](https://core.telegram.org/bots)
-* [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot)
-* {ADD MORE REFERENCES TO LIBRARIES, APIS AND CODE SNIPPETS HERE}
+* Telegram Docs
+* python-telegram-bot
+* Stack overflow
+* Github
+* Friends in class
+
 
