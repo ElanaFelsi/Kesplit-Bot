@@ -11,8 +11,10 @@ Money splitter bot that helps you  manage your expenses in a group
 {OPTIONAL: MORE PROJECT INFO HERE}
 
 ## Screenshots
+![SCREESHOT DECSRIPTION](screenshots/ss.png)
+![SCREESHOT DECSRIPTION](screenshots/ss1.png)
+![SCREESHOT DECSRIPTION](screenshots/ss2.png)
 
-![SCREESHOT DECSRIPTION](screenshots/shopping-list-bot-1.png)
 
 ## How to Run This Bot
 ### Prerequisites
