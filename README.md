@@ -8,7 +8,6 @@ Money splitter bot that helps you  manage your expenses in a group
 * Miriam Gottshalk
 
 
-{OPTIONAL: MORE PROJECT INFO HERE}
 
 ## Screenshots
 ![SCREESHOT DECSRIPTION](screenshots/ss.png)
